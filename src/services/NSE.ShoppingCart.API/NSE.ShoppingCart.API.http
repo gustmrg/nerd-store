@@ -1,0 +1,6 @@
+@NSE.ShoppingCart.API_HostAddress = http://localhost:5249
+
+GET {{NSE.ShoppingCart.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

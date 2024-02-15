@@ -1,0 +1,6 @@
+@NSE.Billing.API_HostAddress = http://localhost:5045
+
+GET {{NSE.Billing.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
