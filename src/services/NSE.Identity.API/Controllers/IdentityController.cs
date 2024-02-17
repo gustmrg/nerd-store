@@ -10,9 +10,8 @@ using NSE.Identity.API.Models;
 
 namespace NSE.Identity.API.Controllers;
 
-[ApiController]
 [Route("api/identity")]
-public class IdentityController : Controller
+public class IdentityController : MainController
 {
     private readonly SignInManager<IdentityUser> _signInManager;
     private readonly UserManager<IdentityUser> _userManager;
@@ -30,7 +29,7 @@ public class IdentityController : Controller
     [HttpPost("register")]
     public async Task<ActionResult> Register(RegisterUserViewModel registerUserViewModel)
     {
-        if (!ModelState.IsValid) return BadRequest();
+        if (!ModelState.IsValid) return CustomResponse(ModelState);
 
         var user = new IdentityUser
         {
@@ -43,27 +42,38 @@ public class IdentityController : Controller
 
         if (result.Succeeded)
         {
-            await _signInManager.SignInAsync(user, false);
-            return Ok(await GenerateJwt(registerUserViewModel.Email));
+            return CustomResponse(await GenerateJwt(registerUserViewModel.Email));
         }
 
-        return BadRequest();
+        foreach (var error in result.Errors)
+        {
+            AddValidationErrors(error.Description);
+        }
+
+        return CustomResponse();
     }
 
     [HttpPost("login")]
     public async Task<ActionResult> Login(LoginUserViewModel loginUserViewModel)
     {
-        if (!ModelState.IsValid) return BadRequest();
+        if (!ModelState.IsValid) return CustomResponse(ModelState);
 
         var result = await _signInManager.PasswordSignInAsync(loginUserViewModel.Email, loginUserViewModel.Password, 
             false, true);
 
         if (result.Succeeded)
         {
-            return Ok(await GenerateJwt(loginUserViewModel.Email));
+            return CustomResponse(await GenerateJwt(loginUserViewModel.Email));
         }
 
-        return BadRequest();
+        if (result.IsLockedOut)
+        {
+            AddValidationErrors("Usuário temporariamente bloqueado por tentativas inválidas");
+            return CustomResponse();
+        }
+        
+        AddValidationErrors("Usuário ou senha incorretos");
+        return CustomResponse();
     }
 
     private async Task<LoginUserResponse> GenerateJwt(string email)
