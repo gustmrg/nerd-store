@@ -80,6 +80,15 @@ public class IdentityController : MainController
     {
         var user = await _userManager.FindByEmailAsync(email);
         var claims = await _userManager.GetClaimsAsync(user);
+
+        var identityClaims = await GetUserClaims(claims, user);
+        var encodedToken = EncodeToken(identityClaims);
+
+        return GetTokenResponse(encodedToken, user, claims);
+    }
+
+    private async Task<ClaimsIdentity> GetUserClaims(ICollection<Claim> claims, IdentityUser user)
+    {
         var userRoles = await _userManager.GetRolesAsync(user);
         
         claims.Add(new Claim(JwtRegisteredClaimNames.Sub, user.Id));
@@ -96,6 +105,11 @@ public class IdentityController : MainController
         var identityClaims = new ClaimsIdentity();
         identityClaims.AddClaims(claims);
 
+        return identityClaims;
+    }
+
+    private string EncodeToken(ClaimsIdentity identityClaims)
+    {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_appSettings.Secret);
 
@@ -108,9 +122,12 @@ public class IdentityController : MainController
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         });
 
-        var encodedToken = tokenHandler.WriteToken(token);
+        return tokenHandler.WriteToken(token); 
+    }
 
-        var response = new LoginUserResponse
+    private LoginUserResponse GetTokenResponse(string encodedToken, IdentityUser user, IEnumerable<Claim> claims)
+    {
+        return new LoginUserResponse
         {
             AccessToken = encodedToken,
             ExpiresIn = TimeSpan.FromHours(_appSettings.ExpirationHours).TotalSeconds,
@@ -121,10 +138,8 @@ public class IdentityController : MainController
                 Claims = claims.Select(c => new UserClaim { Type = c.Type, Value = c.Value })
             }
         };
-
-        return response;
     }
-
+    
     private static long ToUnixEpochDate(DateTime date) =>
         (long)Math.Round((date.ToUniversalTime() - new DateTimeOffset(1970, 1, 1, 0, 0, 0, TimeSpan.Zero)).TotalSeconds);
 }
