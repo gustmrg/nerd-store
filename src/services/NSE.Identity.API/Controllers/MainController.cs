@@ -17,7 +17,7 @@ public abstract class MainController : Controller
 
         return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
         {
-            { "Messages", Errors.ToArray() }   
+            { "messages", Errors.ToArray() }   
         }));
     }
 
